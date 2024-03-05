@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pneumonia Prediction</title>
+    <!-- Include Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
+
+    <div class="bg-white p-8 rounded shadow-md md:max-w-md w-full">
+        <h1 class="text-3xl mb-6 font-bold text-center text-blue-600">Pneumonia Prediction</h1>
+
+        <form id="predictionForm" enctype="multipart/form-data" class="mb-6">
+            <label for="file" class="block text-sm font-medium text-gray-600 mb-2">Upload X-ray Image:</label>
+            <input type="file" name="file" accept=".jpg, .jpeg, .png" required class="mt-1 p-2 border rounded-md w-full">
+            <!-- Image preview container -->
+            <div id="imagePreview" class="mt-4 mb-4 flex justify-center items-center">
+                <img id="preview" class="rounded-md max-w-full max-h-36" alt="Image Preview">
+            </div>
+            <button type="button" onclick="predict()" class="mt-4 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-700 w-full">
+                Predict
+            </button>
+        </form>
+
+        <div id="loadingAnimation" class="hidden mt-6 text-center">
+            <div class="w-10 h-10 mx-auto border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+            <p class="text-sm text-gray-600 mt-2">Predicting...</p>
+        </div>
+
+        <div id="predictionResult" class="hidden mt-6">
+            <h2 class="text-2xl mb-2 font-semibold">Prediction Result:</h2>
+            <div id="resultContainer" class="p-4 rounded-md shadow-md">
+                <p class="text-lg" id="predictedClass"></p>
+                <p class="text-sm text-gray-600" id="confidenceScore"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function predict() {
+            const formData = new FormData(document.getElementById('predictionForm'));
+
+            // Show loading animation
+            document.getElementById('loadingAnimation').classList.remove('hidden');
+            document.getElementById('predictionResult').classList.add('hidden');
+
+            // Get the image file
+            const imageFile = formData.get('file');
+
+            // Display the image preview
+            const previewContainer = document.getElementById('imagePreview');
+            const previewImage = document.getElementById('preview');
+
+            if (imageFile) {
+                const imageURL = URL.createObjectURL(imageFile);
+                previewImage.src = imageURL;
+                previewContainer.classList.remove('hidden');
+            } else {
+                previewContainer.classList.add('hidden');
+            }
+
+            const response = await fetch('/uploadfile/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            const resultContainer = document.getElementById('resultContainer');
+            const predictedClassElement = document.getElementById('predictedClass');
+            const confidenceScoreElement = document.getElementById('confidenceScore');
+
+            predictedClassElement.textContent = result.prediction.class;
+
+            // Ensure that 1 becomes 100% for Pneumonia
+            const invertedConfidencePercentage = Math.round(result.prediction.class.includes('Normal') ? (1 - result.prediction.score) * 100 : result.prediction.score * 100);
+            confidenceScoreElement.textContent = `Confidence Score: ${invertedConfidencePercentage}%`;
+
+            // Set different colors based on the prediction result
+            if (result.prediction.class.includes('Normal')) {
+                resultContainer.classList.remove('bg-red-100');
+                resultContainer.classList.add('bg-green-100');
+                predictedClassElement.classList.remove('text-red-800');
+                predictedClassElement.classList.add('text-green-800');
+            } else {
+                resultContainer.classList.remove('bg-green-100');
+                resultContainer.classList.add('bg-red-100');
+                predictedClassElement.classList.remove('text-green-800');
+                predictedClassElement.classList.add('text-red-800');
+            }
+
+            // Hide loading animation and show prediction result
+            document.getElementById('loadingAnimation').classList.add('hidden');
+            document.getElementById('predictionResult').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
